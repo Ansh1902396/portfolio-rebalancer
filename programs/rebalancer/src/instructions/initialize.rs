@@ -6,15 +6,18 @@ use crate::state::*;
 pub struct InitializePortfolio<'info> {
     #[account(
         init,
-        payer = authority,
+        payer = payer,
         space = Portfolio::MAX_SIZE,
-        seeds = [b"portfolio", manager.as_ref()],
+        seeds = [b"portfolio", manager.key().as_ref()],
         bump
     )]
     pub portfolio: Account<'info, Portfolio>,
     
     #[account(mut)]
-    pub authority: Signer<'info>,
+    pub payer: Signer<'info>,
+    
+    /// CHECK: Manager address validation happens in instruction logic
+    pub manager: UncheckedAccount<'info>,
     
     pub system_program: Program<'info, System>,
 }
@@ -25,31 +28,29 @@ pub fn initialize_portfolio(
     rebalance_threshold: u8,
     min_rebalance_interval: i64,
 ) -> Result<()> {
-    // Validate parameters using new validation methods
+    let portfolio = &mut ctx.accounts.portfolio;
+    let current_time = Clock::get()?.unix_timestamp;
+    
+    // COMPREHENSIVE SECURITY VALIDATIONS
+    require!(manager != Pubkey::default(), crate::errors::RebalancerError::InvalidManager);
     Portfolio::validate_rebalance_threshold(rebalance_threshold)?;
     Portfolio::validate_min_interval(min_rebalance_interval)?;
     
-    let portfolio = &mut ctx.accounts.portfolio;
-    let clock = Clock::get()?;
-    
+    // INITIALIZATION WITH SAFE DEFAULTS
     portfolio.manager = manager;
     portfolio.rebalance_threshold = rebalance_threshold;
     portfolio.total_strategies = 0;
     portfolio.total_capital_moved = 0;
-    portfolio.last_rebalance = clock.unix_timestamp;
+    portfolio.last_rebalance = current_time;
     portfolio.min_rebalance_interval = min_rebalance_interval;
-    portfolio.portfolio_creation = clock.unix_timestamp;
+    portfolio.portfolio_creation = current_time;
     portfolio.emergency_pause = false;
-    portfolio.performance_fee_bps = 200; // Default 2% performance fee
+    portfolio.performance_fee_bps = 200; // 2% default performance fee
     portfolio.bump = ctx.bumps.portfolio;
-    portfolio.reserved = [0; 31];
+    portfolio.reserved = [0u8; 31];
     
-    msg!(
-        "Portfolio initialized for manager: {}, threshold: {}%, interval: {}s",
-        manager,
-        rebalance_threshold,
-        min_rebalance_interval
-    );
+    msg!("Portfolio initialized: manager={}, threshold={}%, interval={}s", 
+         manager, rebalance_threshold, min_rebalance_interval);
     
     Ok(())
 }

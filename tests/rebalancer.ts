@@ -48,7 +48,8 @@ describe("rebalancer", () => {
         )
         .accountsPartial({
           portfolio: portfolioPda,
-          authority: authority.publicKey,
+          payer: authority.publicKey,
+          manager: manager.publicKey,
           systemProgram: SystemProgram.programId,
         })
         .rpc();
@@ -89,7 +90,8 @@ describe("rebalancer", () => {
           )
           .accountsPartial({
             portfolio: invalidPortfolioPda,
-            authority: authority.publicKey,
+            payer: authority.publicKey,
+            manager: invalidManager.publicKey,
             systemProgram: SystemProgram.programId,
           })
           .rpc();
@@ -120,7 +122,8 @@ describe("rebalancer", () => {
           )
           .accountsPartial({
             portfolio: anotherPortfolioPda,
-            authority: authority.publicKey,
+            payer: authority.publicKey,
+            manager: lowThresholdManager.publicKey,
             systemProgram: SystemProgram.programId,
           })
           .rpc();
@@ -152,7 +155,8 @@ describe("rebalancer", () => {
           )
           .accountsPartial({
             portfolio: invalidPortfolioPda,
-            authority: authority.publicKey,
+            payer: authority.publicKey,
+            manager: invalidManager.publicKey,
             systemProgram: SystemProgram.programId,
           })
           .rpc();
@@ -182,7 +186,8 @@ describe("rebalancer", () => {
           )
           .accountsPartial({
             portfolio: anotherPortfolioPda2,
-            authority: authority.publicKey,
+            payer: authority.publicKey,
+            manager: longIntervalManager.publicKey,
             systemProgram: SystemProgram.programId,
           })
           .rpc();
