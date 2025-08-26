@@ -16,7 +16,7 @@ pub struct RegisterStrategy<'info> {
     #[account(
         init,
         payer = authority,
-        space = Strategy::SPACE,
+        space = Strategy::MAX_SIZE,
         seeds = [b"strategy", portfolio.key().as_ref(), strategy_id.as_ref()],
         bump
     )]
@@ -38,36 +38,48 @@ pub fn register_strategy(
     let strategy = &mut ctx.accounts.strategy;
     let clock = Clock::get()?;
     
+    // Validate protocol type
+    protocol_type.validate()?;
+    
+    // Validate balance update
+    Strategy::validate_balance_update(initial_balance)?;
+    
+    // Check emergency pause
+    require!(!portfolio.emergency_pause, RebalancerError::EmergencyPauseActive);
+    
     // Check if portfolio can accommodate more strategies
     require!(
-        portfolio.strategy_count < 255,
-        RebalancerError::InvalidAllocationPercentage
+        portfolio.total_strategies < u32::MAX,
+        RebalancerError::MathOverflow
     );
     
-    // Initialize strategy
-    strategy.portfolio = portfolio.key();
+    // Initialize strategy with new structure
     strategy.strategy_id = strategy_id;
     strategy.protocol_type = protocol_type;
     strategy.current_balance = initial_balance;
-    strategy.target_allocation = 0; // Will be set separately
-    strategy.created_at = clock.unix_timestamp;
-    strategy.updated_at = clock.unix_timestamp;
-    strategy.is_active = true;
+    strategy.yield_rate = 0; // Will be updated by oracle
+    strategy.volatility_score = 0; // Will be calculated
+    strategy.performance_score = 0; // Will be calculated
+    strategy.percentile_rank = 0; // Will be calculated
+    strategy.last_updated = clock.unix_timestamp;
+    strategy.status = StrategyStatus::Active;
+    strategy.total_deposits = initial_balance;
+    strategy.total_withdrawals = 0;
+    strategy.creation_time = clock.unix_timestamp;
     strategy.bump = ctx.bumps.strategy;
+    strategy.reserved = [0; 23];
     
-    // Update portfolio
-    portfolio.strategy_count = portfolio.strategy_count
-        .checked_add(1)
-        .ok_or(RebalancerError::MathOverflow)?;
+    // Update portfolio with saturating arithmetic
+    portfolio.total_strategies = portfolio.total_strategies
+        .saturating_add(1);
     
-    portfolio.total_value = portfolio.total_value
-        .checked_add(initial_balance)
-        .ok_or(RebalancerError::MathOverflow)?;
+    portfolio.total_capital_moved = portfolio.total_capital_moved
+        .saturating_add(initial_balance);
     
     msg!(
-        "Strategy registered: ID={}, Protocol={:?}, Balance={}",
+        "Strategy registered: ID={}, Protocol={}, Balance={}",
         strategy_id,
-        protocol_type,
+        protocol_type.get_protocol_name(),
         initial_balance
     );
     

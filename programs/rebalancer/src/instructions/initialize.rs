@@ -1,6 +1,5 @@
 use anchor_lang::prelude::*;
 use crate::state::*;
-use crate::errors::*;
 
 #[derive(Accounts)]
 #[instruction(manager: Pubkey, rebalance_threshold: u8, min_rebalance_interval: i64)]
@@ -8,7 +7,7 @@ pub struct InitializePortfolio<'info> {
     #[account(
         init,
         payer = authority,
-        space = Portfolio::SPACE,
+        space = Portfolio::MAX_SIZE,
         seeds = [b"portfolio", manager.as_ref()],
         bump
     )]
@@ -26,28 +25,24 @@ pub fn initialize_portfolio(
     rebalance_threshold: u8,
     min_rebalance_interval: i64,
 ) -> Result<()> {
-    // Validate parameters
-    require!(
-        rebalance_threshold > 0 && rebalance_threshold <= 100,
-        RebalancerError::InvalidRebalanceThreshold
-    );
-    
-    require!(
-        min_rebalance_interval > 0,
-        RebalancerError::InvalidRebalanceInterval
-    );
+    // Validate parameters using new validation methods
+    Portfolio::validate_rebalance_threshold(rebalance_threshold)?;
+    Portfolio::validate_min_interval(min_rebalance_interval)?;
     
     let portfolio = &mut ctx.accounts.portfolio;
     let clock = Clock::get()?;
     
     portfolio.manager = manager;
     portfolio.rebalance_threshold = rebalance_threshold;
-    portfolio.min_rebalance_interval = min_rebalance_interval;
+    portfolio.total_strategies = 0;
+    portfolio.total_capital_moved = 0;
     portfolio.last_rebalance = clock.unix_timestamp;
-    portfolio.total_value = 0;
-    portfolio.strategy_count = 0;
-    portfolio.created_at = clock.unix_timestamp;
+    portfolio.min_rebalance_interval = min_rebalance_interval;
+    portfolio.portfolio_creation = clock.unix_timestamp;
+    portfolio.emergency_pause = false;
+    portfolio.performance_fee_bps = 200; // Default 2% performance fee
     portfolio.bump = ctx.bumps.portfolio;
+    portfolio.reserved = [0; 31];
     
     msg!(
         "Portfolio initialized for manager: {}, threshold: {}%, interval: {}s",
