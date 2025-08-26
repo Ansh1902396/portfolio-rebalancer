@@ -54,6 +54,20 @@ pub mod rebalancer {
         instructions::execute_batch_ranking(ctx)
     }
     
+    pub fn extract_capital(
+        ctx: Context<ExtractCapital>,
+        strategy_ids: Vec<Pubkey>,
+    ) -> Result<()> {
+        instructions::extract_capital(ctx, strategy_ids)
+    }
+
+    pub fn redistribute_capital(
+        ctx: Context<RedistributeCapital>, 
+        allocations: Vec<CapitalAllocation>,
+    ) -> Result<()> {
+        instructions::redistribute_capital(ctx, allocations)
+    }
+    
     // Legacy initialize function for backward compatibility
     pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
         instructions::handler(ctx)
