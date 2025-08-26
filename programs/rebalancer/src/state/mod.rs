@@ -169,6 +169,38 @@ impl ProtocolType {
             ProtocolType::LiquidStaking { .. } => "Liquid Staking",
         }
     }
+    
+    pub fn get_expected_tokens(&self) -> Vec<Pubkey> {
+        match self {
+            ProtocolType::StableLending { reserve_address, .. } => {
+                vec![*reserve_address]
+            },
+            ProtocolType::YieldFarming { token_a_mint, token_b_mint, .. } => {
+                vec![*token_a_mint, *token_b_mint]
+            },
+            ProtocolType::LiquidStaking { stake_pool, .. } => {
+                vec![*stake_pool]
+            },
+        }
+    }
+    
+    pub fn validate_balance_constraints(&self, balance: u64) -> Result<()> {
+        match self {
+            ProtocolType::StableLending { .. } => {
+                // Minimum 0.1 SOL for lending protocols
+                require!(balance >= 100_000_000, crate::errors::RebalancerError::InsufficientBalance);
+            },
+            ProtocolType::YieldFarming { .. } => {
+                // Minimum 0.5 SOL for LP positions (gas + slippage)
+                require!(balance >= 500_000_000, crate::errors::RebalancerError::InsufficientBalance);
+            },
+            ProtocolType::LiquidStaking { .. } => {
+                // Minimum 1 SOL for staking (epoch requirements)
+                require!(balance >= 1_000_000_000, crate::errors::RebalancerError::InsufficientBalance);
+            },
+        }
+        Ok(())
+    }
 }
 
 impl CapitalPosition {
