@@ -1,8 +1,22 @@
 {
+  "name": "solana-defi-portfolio-rebalancer",
+  "version": "1.0.0",
+  "description": "A sophisticated dynamic portfolio rebalancing system built on Solana",
+  "type": "module",
   "license": "ISC",
   "scripts": {
+    "build": "anchor build",
+    "test": "anchor test",
+    "test:unit": "anchor test -- --grep 'unit'",
+    "test:integration": "anchor test -- --grep 'integration'",
+    "deploy": "anchor deploy",
+    "deploy:localnet": "anchor deploy --provider.cluster localnet",
+    "deploy:devnet": "anchor deploy --provider.cluster devnet",
+    "localnet": "solana-test-validator",
     "lint:fix": "prettier */*.js \"*/**/*{.js,.ts}\" -w",
-    "lint": "prettier */*.js \"*/**/*{.js,.ts}\" --check"
+    "lint": "prettier */*.js \"*/**/*{.js,.ts}\" --check",
+    "clean": "anchor clean",
+    "docs": "echo 'Documentation available in ./docs/ folder'"
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.31.1"
