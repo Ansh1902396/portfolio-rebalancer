@@ -97,4 +97,7 @@ pub enum RebalancerError {
     
     #[msg("Invalid unstake delay")]
     InvalidUnstakeDelay,
+    
+    #[msg("Insufficient strategies for rebalancing (minimum 2 required)")]
+    InsufficientStrategies,
 }
